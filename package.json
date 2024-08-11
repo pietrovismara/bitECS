@@ -1,15 +1,15 @@
 {
 	"name": "bitecs",
 	"private": true,
-	"main": "./packages/classic/dist/index.cjs",
-	"module": "./packages/classic/dist/index.js",
-	"types": "./packages/classic/dist/index.js",
+	"main": "./packages/core/dist/index.cjs",
+	"module": "./packages/core/dist/index.js",
+	"types": "./packages/core/dist/index.js",
 	"exports": {
 		".": {
-			"types": "./packages/classic/dist/index.js",
-			"require": "./packages/classic/dist/index.cjs",
-			"import": "./packages/classic/dist/index.js",
-			"default": "./packages/classic/dist/index.js"
+			"types": "./packages/core/dist/index.js",
+			"require": "./packages/core/dist/index.cjs",
+			"import": "./packages/core/dist/index.js",
+			"default": "./packages/core/dist/index.js"
 		},
 		"./utils": {
 			"types": "./packages/utils/dist/index.js",
