@@ -16,15 +16,11 @@ export const Prefab = {};
  *
  * @param definition - Optional object containing prefab definition.
  * @param definition.components - Array of components or components with parameters.
- * @param definition.onSet - Callback function called when the prefab is set in a world.
- * @param definition.onReset - Callback function called when the prefab is reset in a world.
  * @param definition.ref - Reference object to be used as the prefab node.
  * @returns The created prefab node.
  */
-export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
+export const definePrefab = <Ref extends {} = {}>(definition?: {
 	components?: ComponentOrWithParams[];
-	onSet?: (world: World, eid: number, params: Params) => void;
-	onReset?: (world: World, eid: number) => void;
 	onAdd?: (world: World, eid: number) => void;
 	onRemove?: (world: World, eid: number) => void;
 	ref?: Ref;
@@ -64,8 +60,6 @@ export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
 		}
 	}
 
-	if (definition?.onSet) defineHiddenProperty(prefab, $onSet, definition.onSet);
-	if (definition?.onReset) defineHiddenProperty(prefab, $onReset, definition.onReset);
 	if (definition?.onAdd) defineHiddenProperty(prefab, $onAdd, definition.onAdd);
 	if (definition?.onRemove) defineHiddenProperty(prefab, $onRemove, definition.onRemove);
 
@@ -83,7 +77,7 @@ export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
 		[$children]: [],
 	});
 
-	return prefab as PrefabNode<Params>;
+	return prefab as PrefabNode;
 };
 
 /**
