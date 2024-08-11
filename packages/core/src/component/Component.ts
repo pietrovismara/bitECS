@@ -23,6 +23,7 @@ import {
 	$componentMap,
 	$createStore,
 	$onAdd,
+	$onRegister,
 	$onRemove,
 	$onReset,
 	$onSet,
@@ -96,6 +97,7 @@ export function defineComponent<
 	onReset?: (world: W, store: Store, eid: number) => void;
 	onAdd?: (world: W, eid: number) => void;
 	onRemove?: (world: W, eid: number) => void;
+	onRegister?: (world: W, store: Store) => void;
 	ref?: Ref;
 }): void extends Ref ? Component<Store, Params> : Component<Store, Params> & Ref {
 	let component = (definition?.ref || {}) as Component<Store, Params> & Ref;
@@ -105,6 +107,7 @@ export function defineComponent<
 	if (definition?.onReset) defineHiddenProperty(component, $onReset, definition.onReset);
 	if (definition?.onAdd) defineHiddenProperty(component, $onAdd, definition.onAdd);
 	if (definition?.onRemove) defineHiddenProperty(component, $onRemove, definition.onRemove);
+	if (definition?.onRegister) defineHiddenProperty(component, $onRegister, definition.onRegister);
 
 	return component;
 }
@@ -144,6 +147,9 @@ export const registerComponent = (world: World, component: Component) => {
 	world[$componentMap].set(component, instance);
 
 	incrementWorldBitflag(world);
+
+	const onRegister = component[$onRegister];
+	if (onRegister) onRegister(world, getStore(world, component));
 };
 
 /**
