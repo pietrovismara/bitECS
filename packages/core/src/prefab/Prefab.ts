@@ -1,4 +1,4 @@
-import { $onSet, $onReset, $onAdd, $onRemove } from '../component/symbols';
+import { $onAdd, $onRemove } from '../component/symbols';
 import { Component, ComponentOrWithParams } from '../component/types';
 import { addEntity } from '../entity/Entity';
 import { ChildOf, IsA } from '../relation/Relation';

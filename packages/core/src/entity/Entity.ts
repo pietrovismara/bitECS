@@ -77,12 +77,8 @@ export const removeEntity = (world: World, eid: number, reset: boolean = false) 
 	}
 
 	for (const component of world[$entityComponents].get(eid)!) {
-		if (component[$isPairComponent]) {
-			if (component[$relation] === IsA) {
-				(component[$pairTarget] as PrefabNode)[$onReset]?.(world, eid, reset);
-			} else if (component[$pairTarget] !== Wildcard) {
-				if (reset) component[$relation]![$onReset]?.(world, getStore(world, component), eid);
-			}
+		if (component[$isPairComponent] && component[$pairTarget] !== Wildcard) {
+			if (reset) component[$relation]![$onReset]?.(world, getStore(world, component), eid);
 		} else {
 			if (reset) component[$onReset]?.(world, getStore(world, component), eid);
 		}

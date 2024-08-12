@@ -166,7 +166,9 @@ describe('Prefab Integration Tests', () => {
 		const Position = defineComponent(vec3Store);
 		const Color = defineComponent(vec3Store);
 
-		const Tree = definePrefab({ components: [Position] });
+		const Tree = definePrefab({
+			components: [Position],
+		});
 		const Trunk = definePrefab({
 			components: [
 				ChildOf(Tree),
