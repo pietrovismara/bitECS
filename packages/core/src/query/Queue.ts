@@ -62,11 +62,6 @@ export function defineExitQueue(args: Query | Component[]): Queue {
 		// Get query data.
 		const data = world[$queryDataMap].get(query)!;
 
-		// Lazy create the queue.
-		if (index === -1) {
-			index = data.exitQueues.push(SparseSet()) - 1;
-		}
-
 		if (data.exitQueues[index].dense.length === 0) {
 			return EMPTY;
 		} else {
