@@ -20,7 +20,7 @@ import { $bitflag } from '../world/symbols.js';
 import { World } from '../world/types.js';
 import {
 	$componentCount,
-	$componentMap,
+	$componentToInstance,
 	$createStore,
 	$onAdd,
 	$onRegister,
@@ -41,9 +41,9 @@ export const getStore = <Store = void, C extends Component = Component>(
 	world: World,
 	component: C
 ) => {
-	if (!world[$componentMap].has(component)) registerComponent(world, component);
+	if (!world[$componentToInstance].has(component)) registerComponent(world, component);
 
-	return world[$componentMap].get(component)!.store as Store extends void
+	return world[$componentToInstance].get(component)!.store as Store extends void
 		? C extends Component<infer Store>
 			? undefined extends Store
 				? Omit<C, keyof Component>
@@ -68,10 +68,10 @@ export const setStore = <C extends Component>(
 			: Store
 		: never
 ) => {
-	if (!world[$componentMap].has(component)) registerComponent(world, component);
+	if (!world[$componentToInstance].has(component)) registerComponent(world, component);
 
-	const node = world[$componentMap].get(component)!;
-	node.store = store;
+	const instance = world[$componentToInstance].get(component)!;
+	instance.store = store;
 };
 
 /**
@@ -144,7 +144,7 @@ export const registerComponent = (world: World, component: Component) => {
 		notQueries,
 	};
 
-	world[$componentMap].set(component, instance);
+	world[$componentToInstance].set(component, instance);
 
 	incrementWorldBitflag(world);
 
@@ -171,7 +171,7 @@ export const registerComponents = (world: World, components: Component[]) => {
  * @returns {boolean}
  */
 export const hasComponent = (world: World, eid: number, component: Component): boolean => {
-	const registeredComponent = world[$componentMap].get(component);
+	const registeredComponent = world[$componentToInstance].get(component);
 	if (!registeredComponent) return false;
 
 	const { generationId, bitflag } = registeredComponent;
@@ -313,9 +313,9 @@ export const addComponentInternal = (world: World, eid: number, component: Compo
 	if (hasComponent(world, eid, component)) return;
 
 	// Register the component with the world if it isn't already.
-	if (!world[$componentMap].has(component)) registerComponent(world, component);
+	if (!world[$componentToInstance].has(component)) registerComponent(world, component);
 
-	const instance = world[$componentMap].get(component)!;
+	const instance = world[$componentToInstance].get(component)!;
 	const { generationId, bitflag, queries } = instance;
 
 	// Add bitflag to entity bitmask.
@@ -364,7 +364,7 @@ export const removeComponent = (world: World, eid: number, component: Component,
 	// Exit early if the entity does not have the component.
 	if (!hasComponent(world, eid, component)) return;
 
-	const instance = world[$componentMap].get(component)!;
+	const instance = world[$componentToInstance].get(component)!;
 	const { generationId, bitflag, queries } = instance;
 
 	// Remove flag from entity bitmask.

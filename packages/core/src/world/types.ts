@@ -1,4 +1,4 @@
-import { $componentCount, $componentMap } from '../component/symbols';
+import { $componentCount, $componentToInstance } from '../component/symbols';
 import { Component, ComponentInstance } from '../component/types';
 import { $entityArray, $entityComponents, $entityMasks, $entitySparseSet } from '../entity/symbols';
 import { PrefabNode } from '../prefab/types';
@@ -32,7 +32,7 @@ export interface World {
 	[$archetypes]: any[];
 	[$entitySparseSet]: ReturnType<typeof SparseSet>;
 	[$bitflag]: number;
-	[$componentMap]: Map<Component, ComponentInstance>;
+	[$componentToInstance]: Map<Component, ComponentInstance>;
 	[$componentCount]: number;
 	[$queryDataMap]: Map<Query, QueryData>;
 	[$queries]: Set<QueryData>;

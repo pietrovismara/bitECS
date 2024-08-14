@@ -1,4 +1,4 @@
-import { $componentCount, $componentMap } from '../component/symbols.js';
+import { $componentCount, $componentToInstance } from '../component/symbols.js';
 import {
 	$queryDataMap,
 	$queries,
@@ -67,7 +67,7 @@ export function defineWorld<W extends object = {}>(world?: W): W & World {
 		[$entitySparseSet]: entitySparseSet,
 		[$entityArray]: entitySparseSet.dense,
 		[$bitflag]: 1,
-		[$componentMap]: new Map(),
+		[$componentToInstance]: new Map(),
 		[$componentCount]: 0,
 		[$queryDataMap]: new Map(),
 		[$queries]: new Set(),
@@ -123,7 +123,7 @@ export const resetWorld = (world: World) => {
 
 	world[$bitflag] = 1;
 
-	world[$componentMap] = new Map();
+	world[$componentToInstance] = new Map();
 	world[$componentCount] = 0;
 
 	world[$queryDataMap] = new Map();
@@ -154,7 +154,7 @@ export const deleteWorld = (world: World) => {
 	delete deletedWorld[$entitySparseSet];
 	delete deletedWorld[$entityArray];
 	delete deletedWorld[$bitflag];
-	delete deletedWorld[$componentMap];
+	delete deletedWorld[$componentToInstance];
 	delete deletedWorld[$componentCount];
 	delete deletedWorld[$queryDataMap];
 	delete deletedWorld[$queries];
@@ -181,7 +181,7 @@ export const deleteWorld = (world: World) => {
  * @param {World} world
  * @returns Array
  */
-export const getWorldComponents = (world: World) => Array.from(world[$componentMap].keys());
+export const getWorldComponents = (world: World) => Array.from(world[$componentToInstance].keys());
 
 /**
  * Returns all existing entities in a world

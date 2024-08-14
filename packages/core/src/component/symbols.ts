@@ -1,4 +1,4 @@
-export const $componentMap = Symbol('componentMap');
+export const $componentToInstance = Symbol('componentToInstance');
 export const $componentCount = Symbol('componentCount');
 export const $onAdd = Symbol('onAdd');
 export const $onRemove = Symbol('onRemove');

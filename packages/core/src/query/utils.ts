@@ -1,5 +1,5 @@
 import { registerComponent } from '../component/Component';
-import { $componentMap } from '../component/symbols';
+import { $componentToInstance } from '../component/symbols';
 import { Component } from '../component/types';
 import { TODO } from '../utils/types';
 import { World } from '../world/types';
@@ -15,10 +15,10 @@ export const archetypeHash = (world: World, components: (Component | QueryModifi
 			if (typeof b === 'function' && b[$modifier]) {
 				b = b()[0];
 			}
-			if (!world[$componentMap].has(a)) registerComponent(world, a);
-			if (!world[$componentMap].has(b)) registerComponent(world, b);
-			const aData = world[$componentMap].get(a)!;
-			const bData = world[$componentMap].get(b)!;
+			if (!world[$componentToInstance].has(a)) registerComponent(world, a);
+			if (!world[$componentToInstance].has(b)) registerComponent(world, b);
+			const aData = world[$componentToInstance].get(a)!;
+			const bData = world[$componentToInstance].get(b)!;
 			return aData.id > bData.id ? 1 : -1;
 		})
 		.reduce((acc, component: TODO) => {
@@ -27,8 +27,8 @@ export const archetypeHash = (world: World, components: (Component | QueryModifi
 				mod = component()[1];
 				component = component()[0];
 			}
-			if (!world[$componentMap].has(component)) registerComponent(world, component);
-			const componentData = world[$componentMap].get(component)!;
+			if (!world[$componentToInstance].has(component)) registerComponent(world, component);
+			const componentData = world[$componentToInstance].get(component)!;
 			if (mod) {
 				acc += `-${mod}(${componentData.id})`;
 			} else {
