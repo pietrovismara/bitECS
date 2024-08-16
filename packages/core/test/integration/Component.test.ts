@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { describe, expect, it, vi } from 'vitest';
-import { $componentMap } from '../../src/component/symbols.js';
+import { $componentToInstance } from '../../src/component/symbols.js';
 import {
 	addComponent,
 	addComponents,
@@ -58,7 +58,7 @@ describe('Component Integration Tests', () => {
 		const world = createWorld();
 
 		registerComponent(world, TestComponent);
-		assert(world[$componentMap].has(TestComponent));
+		assert(world[$componentToInstance].has(TestComponent));
 	});
 
 	it('should register components automatically upon adding to an entity', () => {
@@ -66,7 +66,7 @@ describe('Component Integration Tests', () => {
 		const eid = addEntity(world);
 
 		addComponent(world, eid, TestComponent);
-		assert(world[$componentMap].has(TestComponent));
+		assert(world[$componentToInstance].has(TestComponent));
 	});
 
 	it('can define a component with ref', () => {

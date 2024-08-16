@@ -212,7 +212,8 @@ export function addComponents(world: World, eid: number, ...args: ComponentOrWit
 }
 
 export const addComponentsInternal = (world: World, eid: number, args: ComponentOrWithParams[]) => {
-	const prefabs = new Set<PrefabNode>();
+	const prefabs = new Map<PrefabNode<any>, any>();
+	const prefabAncestors = new Set<PrefabNode<any>>();
 	const components = new Map<Component, any>();
 	const children: PrefabNode[] = [];
 
@@ -247,7 +248,7 @@ export const addComponentsInternal = (world: World, eid: number, args: Component
 			let prefab = component[$pairTarget] as PrefabNode;
 
 			// Set the prefab instead of the relation so that we can call its onAdd hook
-			prefabs.add(prefab);
+			prefabs.set(prefab, params);
 
 			if (prefab[$children]) {
 				children.push(...prefab[$children]);
@@ -257,7 +258,7 @@ export const addComponentsInternal = (world: World, eid: number, args: Component
 			// Go trough each ancestor
 			// Add its components and params
 			for (const ancestor of ancestors) {
-				prefabs.add(ancestor);
+				prefabAncestors.add(ancestor);
 
 				for (const prefabComponent of ancestor[$prefabComponents]) {
 					if (Array.isArray(prefabComponent)) {
@@ -298,7 +299,22 @@ export const addComponentsInternal = (world: World, eid: number, args: Component
 		}
 	}
 
-	for (const prefab of prefabs) {
+	for (const tuple of prefabs) {
+		const prefab = tuple[0];
+		const params = tuple[1];
+
+		registerPrefab(world, prefab);
+
+		addComponentInternal(world, eid, IsA(prefab));
+		prefab[$onAdd]?.(world, eid);
+		prefab[$onSet]?.(world, eid, params);
+	}
+
+	for (const prefab of prefabAncestors) {
+		if (prefabs.has(prefab)) {
+			continue;
+		}
+
 		registerPrefab(world, prefab);
 
 		addComponentInternal(world, eid, IsA(prefab));

@@ -239,4 +239,28 @@ describe('Prefab Integration Tests', () => {
 		const store = getStore(world, Box);
 		assert(store[eid] === store[prefabEid]);
 	});
+
+	test('prefab with params', () => {
+		type Vec3 = [number, number, number];
+		const Box = defineComponent({
+			store: () => [] as Vec3[],
+		});
+
+		const BoxPrefab = definePrefab({
+			components: [Box],
+			onSet: (world, eid, params: Vec3) => {
+				const boxes = getStore(world, Box);
+				boxes[eid] = params;
+			},
+		});
+
+		const world = createWorld();
+
+		const params = [1, 1, 1];
+		const eid = addEntity(world, withParams(IsA(BoxPrefab), params));
+
+		const boxes = getStore(world, Box);
+
+		assert(boxes[eid] === params);
+	});
 });

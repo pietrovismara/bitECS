@@ -1,4 +1,4 @@
-import { $onAdd, $onRemove } from '../component/symbols';
+import { $onAdd, $onRemove, $onSet } from '../component/symbols';
 import { Component, ComponentOrWithParams } from '../component/types';
 import { addEntity } from '../entity/Entity';
 import { ChildOf, IsA } from '../relation/Relation';
@@ -19,15 +19,16 @@ export const Prefab = {};
  * @param definition.ref - Reference object to be used as the prefab node.
  * @returns The created prefab node.
  */
-export const definePrefab = <Ref extends {} = {}>(definition?: {
+export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
 	components?: ComponentOrWithParams[];
+	onSet?: (world: World, eid: number, params: Params) => void;
 	onAdd?: (world: World, eid: number) => void;
 	onRemove?: (world: World, eid: number) => void;
 	ref?: Ref;
 }) => {
-	const prefab = (definition?.ref ?? {}) as PrefabNode;
+	const prefab = (definition?.ref ?? {}) as PrefabNode<Params>;
 
-	const prefabs: PrefabNode[] = [];
+	const prefabs: PrefabNode<any>[] = [];
 	const components: ComponentOrWithParams[] = [];
 
 	if (definition?.components) {
@@ -46,10 +47,10 @@ export const definePrefab = <Ref extends {} = {}>(definition?: {
 				const relation = component[$relation]!;
 
 				if (relation === IsA) {
-					const target = component[$pairTarget] as PrefabNode;
+					const target = component[$pairTarget] as PrefabNode<any>;
 					prefabs.push(target);
 				} else if (relation === ChildOf) {
-					const target = component[$pairTarget] as PrefabNode;
+					const target = component[$pairTarget] as PrefabNode<any>;
 					if (typeof target === 'object' && $worldToEid in target) {
 						target[$children].push(prefab);
 					}
@@ -60,10 +61,11 @@ export const definePrefab = <Ref extends {} = {}>(definition?: {
 		}
 	}
 
+	if (definition?.onSet) defineHiddenProperty(prefab, $onSet, definition.onSet);
 	if (definition?.onAdd) defineHiddenProperty(prefab, $onAdd, definition.onAdd);
 	if (definition?.onRemove) defineHiddenProperty(prefab, $onRemove, definition.onRemove);
 
-	const ancestors = [] as PrefabNode[];
+	const ancestors = [] as PrefabNode<any>[];
 	for (const p of prefabs) {
 		ancestors.push(...p[$ancestors]);
 	}
@@ -77,7 +79,7 @@ export const definePrefab = <Ref extends {} = {}>(definition?: {
 		[$children]: [],
 	});
 
-	return prefab as PrefabNode;
+	return prefab;
 };
 
 /**
