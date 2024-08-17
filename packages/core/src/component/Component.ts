@@ -123,16 +123,6 @@ export const registerComponent = (world: World, component: Component) => {
 		throw new Error(`bitECS - Cannot register null or undefined component`);
 	}
 
-	const queries = new Set<QueryData>();
-	const notQueries = new Set<QueryData>();
-
-	// Collect all queries that match this component.
-	world[$queries].forEach((queryNode) => {
-		if (queryNode.allComponents.includes(component)) {
-			queries.add(queryNode);
-		}
-	});
-
 	// Register internal component node with world.
 	const instance: ComponentInstance = {
 		id: world[$componentCount]++,
@@ -140,8 +130,8 @@ export const registerComponent = (world: World, component: Component) => {
 		bitflag: world[$bitflag],
 		ref: component,
 		store: component[$createStore] ? component[$createStore]() : component,
-		queries,
-		notQueries,
+		queries: new Set<QueryData>(),
+		notQueries: new Set<QueryData>(),
 	};
 
 	world[$componentToInstance].set(component, instance);
