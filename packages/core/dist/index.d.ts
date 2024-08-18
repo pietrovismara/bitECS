@@ -1,33 +1,11 @@
-import { IUint32SparseSet } from '@bitecs/utils/Uint32SparseSet';
-
-declare const $componentMap: unique symbol;
+declare const $componentToInstance: unique symbol;
 declare const $componentCount: unique symbol;
-declare const $schema: unique symbol;
-
-declare const TYPES_ENUM: {
-    readonly i8: "i8";
-    readonly ui8: "ui8";
-    readonly ui8c: "ui8c";
-    readonly i16: "i16";
-    readonly ui16: "ui16";
-    readonly i32: "i32";
-    readonly ui32: "ui32";
-    readonly f32: "f32";
-    readonly f64: "f64";
-    readonly eid: "eid";
-};
-declare const TYPES: {
-    readonly i8: Int8ArrayConstructor;
-    readonly ui8: Uint8ArrayConstructor;
-    readonly ui8c: Uint8ClampedArrayConstructor;
-    readonly i16: Int16ArrayConstructor;
-    readonly ui16: Uint16ArrayConstructor;
-    readonly i32: Int32ArrayConstructor;
-    readonly ui32: Uint32ArrayConstructor;
-    readonly f32: Float32ArrayConstructor;
-    readonly f64: Float64ArrayConstructor;
-    readonly eid: Uint32ArrayConstructor;
-};
+declare const $onAdd: unique symbol;
+declare const $onRemove: unique symbol;
+declare const $onReset: unique symbol;
+declare const $onSet: unique symbol;
+declare const $onRegister: unique symbol;
+declare const $createStore: unique symbol;
 
 declare const SparseSet: () => {
     add: (val: number) => void;
@@ -42,6 +20,7 @@ declare const SparseSet: () => {
 declare const $modifier: unique symbol;
 declare const $queries: unique symbol;
 declare const $notQueries: unique symbol;
+declare const $hashToUncachedQuery: unique symbol;
 declare const $queriesHashMap: unique symbol;
 declare const $querySparseSet: unique symbol;
 declare const $queueRegisters: unique symbol;
@@ -51,106 +30,33 @@ declare const $queryComponents: unique symbol;
 declare const $enterQuery: unique symbol;
 declare const $exitQuery: unique symbol;
 
-type QueryModifier<W extends World = World> = (c: Component[]) => (world: W) => Component | QueryModifier<W>;
-type QueryResult<W extends World = World, TTest = HasBufferQueries<W>> = TTest extends true ? Uint32Array : readonly number[];
-type Query = (<W extends World = World>(world: W, clearDiff?: boolean) => QueryResult<W>) & {
-    [$queryComponents]: Component[];
+type QueryModifierTuple = readonly [Component, string] & {
+    [$modifier]: boolean;
+};
+type QueryModifier = (c: Component[]) => () => QueryModifierTuple;
+type QueryResult = readonly number[];
+type Query = (<W extends World = World>(world: W) => QueryResult) & {
+    [$queryComponents]: (Component | QueryModifierTuple)[];
     [$queueRegisters]: ((world: World) => void)[];
 };
-type QueryData<TBufferQueries extends boolean = false | true> = (TBufferQueries extends true ? IUint32SparseSet : ReturnType<typeof SparseSet>) & {
-    archetypes: any;
-    changed: any;
-    notComponents: any;
-    changedComponents: any;
-    allComponents: Component[];
-    masks: any;
-    notMasks: any;
-    hasMasks: any;
-    generations: any;
-    flatProps: any;
+type UncachedQueryData = {
+    generations: number[];
+    masks: Record<number, number>;
+    notMasks: Record<number, number>;
+    hasMasks: Record<number, number>;
+    instances: ComponentInstance[];
+    queriesPrefab: boolean;
+};
+type QueryData = ReturnType<typeof SparseSet> & {
     toRemove: ReturnType<typeof SparseSet>;
     enterQueues: ReturnType<typeof SparseSet>[];
     exitQueues: ReturnType<typeof SparseSet>[];
-    shadows: any;
     query: Query;
+} & UncachedQueryData;
+type UncachedQuery = (<W extends World = World>(world: W) => QueryResult) & {
+    [$queryComponents]: (Component | QueryModifier)[];
 };
 type Queue<W extends World = World> = (world: W, drain?: boolean) => readonly number[];
-
-type TODO = any;
-type Constructor = new (...args: any[]) => any;
-type TypedArray = Uint8Array | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
-
-declare const $storeRef: unique symbol;
-declare const $storeSize: unique symbol;
-declare const $storeMaps: unique symbol;
-declare const $storeFlattened: unique symbol;
-declare const $storeBase: unique symbol;
-declare const $storeType: unique symbol;
-declare const $storeArrayElementCounts: unique symbol;
-declare const $storeSubarrays: unique symbol;
-declare const $subarrayCursors: unique symbol;
-declare const $subarray: unique symbol;
-declare const $subarrayFrom: unique symbol;
-declare const $subarrayTo: unique symbol;
-declare const $parentArray: unique symbol;
-declare const $tagStore: unique symbol;
-declare const $queryShadow: unique symbol;
-declare const $serializeShadow: unique symbol;
-declare const $indexType: unique symbol;
-declare const $indexBytes: unique symbol;
-declare const $isEidType: unique symbol;
-
-interface Metadata {
-    [$storeSize]: number;
-    [$storeMaps]: Record<string, unknown>;
-    [$storeSubarrays]: Record<string, TypedArray>;
-    [$storeRef]: symbol;
-    [$subarrayCursors]: Record<string, number>;
-    [$storeFlattened]: ArrayLike<any>[];
-    [$storeArrayElementCounts]: Record<string, number>;
-    [$storeBase]: () => Record<any, any>;
-    [$tagStore]: boolean;
-}
-type ComponentType$1 = keyof typeof TYPES;
-type ListType = readonly [ComponentType$1, number];
-interface Schema {
-    [key: string]: ComponentType$1 | ListType | Schema;
-}
-
-type Component = any;
-interface ComponentNode {
-    id: number;
-    generationId: number;
-    bitflag: number;
-    ref: Component;
-    queries: Set<QueryData>;
-    notQueries: Set<QueryData>;
-    changedQueries: Set<QueryData>;
-}
-type Types = keyof typeof TYPES;
-type ArrayByType = {
-    ['i8']: Int8Array;
-    ['ui8']: Uint8Array;
-    ['ui8c']: Uint8ClampedArray;
-    ['i16']: Int16Array;
-    ['ui16']: Uint16Array;
-    ['i32']: Int32Array;
-    ['ui32']: Uint32Array;
-    ['f32']: Float32Array;
-    ['f64']: Float64Array;
-    ['eid']: Uint32Array;
-};
-type ComponentType<T extends Schema> = {
-    [key in keyof T]: T[key] extends Types ? ArrayByType[T[key]] : T[key] extends [infer RT, number] ? RT extends Types ? Array<ArrayByType[RT]> : unknown : T[key] extends Schema ? ComponentType<T[key]> : unknown;
-};
-type ComponentProp = TypedArray | Array<TypedArray>;
-
-declare const $entityMasks: unique symbol;
-declare const $entityComponents: unique symbol;
-declare const $entitySparseSet: unique symbol;
-declare const $entityArray: unique symbol;
-declare const $entityIndices: unique symbol;
-declare const $removedEntities: unique symbol;
 
 declare const $pairsMap: unique symbol;
 declare const $isPairComponent: unique symbol;
@@ -160,26 +66,86 @@ declare const $onTargetRemoved: unique symbol;
 declare const $exclusiveRelation: unique symbol;
 declare const $autoRemoveSubject: unique symbol;
 declare const $relationTargetEntities: unique symbol;
-declare const $initStore: unique symbol;
+declare const $component: unique symbol;
 
-declare const $size: unique symbol;
+declare const $prefabComponents: unique symbol;
+declare const $worldToEid: unique symbol;
+declare const $children: unique symbol;
+declare const $ancestors: unique symbol;
+
+type PrefabNode<Params = void> = {
+    [$prefabComponents]: Component[];
+    [$worldToEid]: Map<World, number>;
+    [$onSet]: (world: any, eid: number, params?: Params) => void;
+    [$onAdd]: (world: any, eid: number) => void;
+    [$onRemove]: (world: any, eid: number) => void;
+    [$children]: PrefabNode<any>[];
+    [$ancestors]: PrefabNode<any>[];
+};
+
+type RelationTarget = number | string | PrefabNode;
+type RelationType<T> = T & {
+    [$pairsMap]: Map<number | string, T>;
+    [$component]: () => T;
+    [$exclusiveRelation]: boolean;
+    [$autoRemoveSubject]: boolean;
+    [$onSet]: (world: World, eid: number, params: any) => void;
+    [$onReset]: (world: World, eid: number) => void;
+    [$onTargetRemoved]: (world: World, subject: number, target: number) => void;
+} & ((target: RelationTarget) => T);
+type RelationOptions = {
+    exclusive: boolean;
+    autoRemoveSubject: boolean;
+};
+
+type Component<Store = any, Params = any> = {
+    name?: string;
+    [$onSet]?: (world: any, store: Store, eid: number, params: Params) => void;
+    [$onReset]?: (world: any, store: Store, eid: number) => void;
+    [$onAdd]?: (world: any, eid: number) => void;
+    [$onRemove]?: (world: any, eid: number) => void;
+    [$onRegister]?: (world: any, store: Store) => void;
+    [$createStore]?: () => Store;
+    [$isPairComponent]?: boolean;
+    [$relation]?: RelationType<Component<Store>>;
+    [$pairTarget]?: RelationTarget;
+};
+interface ComponentInstance {
+    id: number;
+    generationId: number;
+    bitflag: number;
+    ref: Component;
+    store: any;
+    queries: Set<QueryData>;
+    notQueries: Set<QueryData>;
+}
+type ComponentOrWithParams<C extends Component = Component> = C | [C, C extends Component<any, infer P> ? P : never];
+
+declare const $entityMasks: unique symbol;
+declare const $entityComponents: unique symbol;
+declare const $entitySparseSet: unique symbol;
+declare const $entityArray: unique symbol;
+declare const $entityIndices: unique symbol;
+declare const $removedEntities: unique symbol;
+
 declare const $bitflag: unique symbol;
-declare const $archetypes: unique symbol;
 declare const $localEntities: unique symbol;
 declare const $localEntityLookup: unique symbol;
-declare const $manualEntityRecycling: unique symbol;
-declare const $bufferQueries: unique symbol;
+declare const $entityCursor: unique symbol;
+declare const $removed: unique symbol;
+declare const $removedOut: unique symbol;
+declare const $recycled: unique symbol;
+declare const $eidToPrefab: unique symbol;
 
 interface World {
-    [$size]: number;
     [$entityArray]: number[];
     [$entityMasks]: Array<number>[];
     [$entityComponents]: Map<number, Set<Component>>;
-    [$archetypes]: any[];
     [$entitySparseSet]: ReturnType<typeof SparseSet>;
     [$bitflag]: number;
-    [$componentMap]: Map<Component, ComponentNode>;
+    [$componentToInstance]: Map<Component, ComponentInstance>;
     [$componentCount]: number;
+    [$hashToUncachedQuery]: Map<string, UncachedQueryData>;
     [$queryDataMap]: Map<Query, QueryData>;
     [$queries]: Set<QueryData>;
     [$queriesHashMap]: Map<string, QueryData>;
@@ -187,110 +153,52 @@ interface World {
     [$dirtyQueries]: Set<any>;
     [$localEntities]: Map<any, any>;
     [$localEntityLookup]: Map<any, any>;
-    [$relationTargetEntities]: ReturnType<typeof SparseSet>;
-    [$manualEntityRecycling]: boolean;
-    [$bufferQueries]: boolean;
-    _bufferQueries: boolean;
+    [$relationTargetEntities]: Set<RelationTarget>;
+    [$recycled]: number[];
+    [$removed]: number[];
+    [$removedOut]: number[];
+    [$entityCursor]: number;
+    [$eidToPrefab]: Map<number, PrefabNode>;
 }
-type HasBufferQueries<W extends World> = W extends {
-    _bufferQueries: true;
-} ? true : false;
-
-declare const worlds: World[];
-declare function defineWorld<W extends object = {}>(world: W, size?: number): W & World;
-declare function defineWorld<W extends World = World>(size?: number): W;
-declare function registerWorld(world: World): void;
-/**
- * Creates a new world.
- *
- * @returns {object}
- */
-declare function createWorld<W extends object = {}>(world?: W, size?: number): W & World;
-declare function createWorld(size?: number): World;
-/**
- * Resets a world.
- *
- * @param {World} world
- * @returns {object}
- */
-declare const resetWorld: (world: World, size?: number) => World;
-/**
- * Deletes a world.
- *
- * @param {World} world
- */
-declare const deleteWorld: (world: World) => void;
-/**
- * Returns all components registered to a world
- *
- * @param {World} world
- * @returns Array
- */
-declare const getWorldComponents: (world: World) => any[];
-/**
- * Returns all existing entities in a world
- *
- * @param {World} world
- * @returns Array
- */
-declare const getAllEntities: (world: World) => number[];
-declare const enableManualEntityRecycling: <W extends World>(world: W) => W;
-declare const enableBufferedQueries: <W extends World>(world: W) => W & {
-    _bufferQueries: true;
-};
-
-declare const resetGlobals: () => void;
-declare const getDefaultSize: () => number;
-/**
- * Sets the default maximum number of entities for worlds and component stores.
- *
- * @param {number} newSize
- */
-declare const setDefaultSize: (newSize: number) => void;
-/**
- * Sets the number of entities that must be removed before removed entity ids begin to be recycled.
- * This should be set to as a % (0-1) of `defaultSize` that you would never likely remove/add on a single frame.
- *
- * @param {number} newThreshold
- */
-declare const setRemovedRecycleThreshold: (newThreshold: number) => void;
-declare const flushRemovedEntities: (world: World) => void;
-/**
- * Adds a new entity to the specified world.
- *
- * @param {World} world
- * @returns {number} eid
- */
-declare const addEntity: (world: World) => number;
-/**
- * Removes an existing entity from the specified world.
- *
- * @param {World} world
- * @param {number} eid
- */
-declare const removeEntity: (world: World, eid: number) => void;
-/**
- *  Returns an array of components that an entity possesses.
- *
- * @param {*} world
- * @param {*} eid
- */
-declare const getEntityComponents: (world: World, eid: number) => TODO[];
-/**
- * Checks the existence of an entity in a world
- *
- * @param {World} world
- * @param {number} eid
- */
-declare const entityExists: (world: World, eid: number) => boolean;
+type IWorld = World;
 
 /**
- * Defines a new component store.
+ * Retrieves the store associated with the specified component in the given world.
  *
- * @param {object} schema
- * @returns {object}
+ * @param {World} world - The world to retrieve the component store from.
+ * @param {Component} component - The component to get the store for.
+ * @returns {Store} The store associated with the specified component.
  */
-declare const defineComponent: <T extends Schema>(schema?: T, size?: number) => ComponentType<T>;
+declare const getStore: <Store = void, C extends Component = Component>(world: World, component: C) => Store extends void ? C extends Component<infer Store_1> ? undefined extends Store_1 ? Omit<C, keyof Component> : Store_1 : never : Store;
+/**
+ * Sets the store associated with the specified component in the given world.
+ *
+ * @param {World} world - The world to set the component store in.
+ * @param {Component} component - The component to set the store for.
+ * @param {Store} store - The store to associate with the component.
+ */
+declare const setStore: <C extends Component>(world: World, component: C, store: C extends Component<infer Store> ? undefined extends Store ? Omit<C, keyof Component> : Store : never) => void;
+/**
+ * Defines a component for use in a World.
+ *
+ * Components are the building blocks of entities in a World. This function allows you to define a new component with an optional store, onSet callback, and onReset callback.
+ *
+ * @param definition - An optional object that defines the component's properties.
+ * @param definition.store - A function that returns the initial store for the component.
+ * @param definition.onSet - A callback that is called when the component's store is added to an entity.
+ * @param definition.onReset - A callback that is called when the component's store is removed from an entity.
+ * @param definition.ref - An optional reference object to be used for the component.
+ * @returns The defined component.
+ */
+declare function defineComponent<Store = void, Params = void, Ref extends object = {}, W extends World = World>(definition?: {
+    store?: () => Store;
+    onSet?: (world: W, store: Store, eid: number, params: Params) => void;
+    onReset?: (world: W, store: Store, eid: number) => void;
+    onAdd?: (world: W, eid: number) => void;
+    onRemove?: (world: W, eid: number) => void;
+    onRegister?: (world: W, store: Store) => void;
+    ref?: Ref;
+}): void extends Ref ? Component<Store, Params> : Component<Store, Params> & Ref;
 /**
  * Registers a component with a world.
  *
@@ -309,60 +217,138 @@ declare const registerComponents: (world: World, components: Component[]) => voi
  * Checks if an entity has a component.
  *
  * @param {World} world
- * @param {Component} component
  * @param {number} eid
+ * @param {Component} component
  * @returns {boolean}
  */
-declare const hasComponent: (world: World, component: Component, eid: number) => boolean;
+declare const hasComponent: (world: World, eid: number, component: Component) => boolean;
 /**
  * Adds a component to an entity
  *
  * @param {World} world
- * @param {Component} component
  * @param {number} eid
+ * @param {Component} component
  * @param {boolean} [reset=false]
  */
-declare const addComponent: (world: World, component: Component, eid: number, reset?: boolean) => void;
+declare const addComponent: (world: World, eid: number, arg: ComponentOrWithParams) => void;
 /**
  * Adds multiple components to an entity.
  *
  * @param {World} world
- * @param {Component[]} components
  * @param {number} eid
- * @param {boolean} [reset=false]
+ * @param {...ComponentOrWithParams} components
  */
-declare const addComponents: (world: World, components: Component[], eid: number, reset?: boolean) => void;
+declare function addComponents(world: World, eid: number, ...args: ComponentOrWithParams[]): void;
 /**
  * Removes a component from an entity.
  *
  * @param {World} world
- * @param {Component} component
  * @param {number} eid
+ * @param {Component} component
  * @param {boolean} [reset=true]
  */
-declare const removeComponent: (world: World, component: Component, eid: number, reset?: boolean) => void;
+declare const removeComponent: (world: World, eid: number, component: Component, reset?: boolean) => void;
 /**
  * Removes multiple components from an entity.
  *
  * @param {World} world
- * @param {Component[]} components
  * @param {number} eid
+ * @param {Component[]} components
  * @param {boolean} [reset=true]
  */
-declare const removeComponents: (world: World, components: Component[], eid: number, reset?: boolean) => void;
+declare const removeComponents: (world: World, eid: number, components: Component[]) => void;
 
-type System<W extends World = World, R extends any[] = any[]> = (world: W, ...args: R) => W;
+declare const TYPES_ENUM: {
+    readonly i8: "i8";
+    readonly ui8: "ui8";
+    readonly ui8c: "ui8c";
+    readonly i16: "i16";
+    readonly ui16: "ui16";
+    readonly i32: "i32";
+    readonly ui32: "ui32";
+    readonly f32: "f32";
+    readonly f64: "f64";
+    readonly eid: "eid";
+};
+
+type TODO = any;
+type Constructor = new (...args: any[]) => any;
+type TypedArray = Uint8Array | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 
 /**
- * Defines a new system function.
+ * Adds a new entity to the specified world, adding any provided component to the entity.
  *
- * @param {function} update
- * @returns {function}
+ * @param {World} world
+ * @param {...Component} components
+ * @returns {number} eid
  */
-declare const defineSystem: <W extends World = World, R extends any[] = any[]>(update: (world: W, ...args: R) => void) => System<W, R>;
+declare const addEntity: (world: World, ...args: ComponentOrWithParams[]) => number;
+/**
+ * Removes an existing entity from the specified world.
+ *
+ * @param {World} world
+ * @param {number} eid
+ */
+declare const removeEntity: (world: World, eid: number, reset?: boolean) => void;
+/**
+ *  Returns an array of components that an entity possesses.
+ *
+ * @param {*} world
+ * @param {*} eid
+ */
+declare const getEntityComponents: (world: World, eid: number) => TODO;
+/**
+ * Checks the existence of an entity in a world
+ *
+ * @param {World} world
+ * @param {number} eid
+ */
+declare const entityExists: (world: World, eid: number) => boolean;
 
-declare const Not: (c: Component) => QueryModifier;
-declare const Changed: (c: Component) => QueryModifier;
+declare const Prefab: {};
+/**
+ * Defines a prefab, a reusable collection of components that can be added to an entity, with optional components, set/reset callbacks, and reference object.
+ *
+ * @param definition - Optional object containing prefab definition.
+ * @param definition.components - Array of components or components with parameters.
+ * @param definition.ref - Reference object to be used as the prefab node.
+ * @returns The created prefab node.
+ */
+declare const definePrefab: <Params = void, Ref extends {} = {}>(definition?: {
+    components?: ComponentOrWithParams[];
+    onSet?: (world: World, eid: number, params: Params) => void;
+    onAdd?: (world: World, eid: number) => void;
+    onRemove?: (world: World, eid: number) => void;
+    ref?: Ref;
+}) => PrefabNode<Params>;
+/**
+ * Registers a prefab in the specified world and returns its entity ID (EID).
+ *
+ * If the prefab has already been registered in the world, this function will return the existing EID.
+ * Otherwise, it will create a new prefab entity in the world with the prefab's components and return the new EID.
+ *
+ * @param world - The world to register the prefab in.
+ * @param prefab - The prefab to register.
+ * @returns The entity ID (EID) of the registered prefab in the specified world.
+ */
+declare const registerPrefab: (world: World, prefab: PrefabNode) => number;
+/**
+ * Gets the entity ID (EID) for the given prefab in the specified world.
+ *
+ * @param world - The world to get the prefab EID from.
+ * @param prefab - The prefab to get the EID for.
+ * @returns The entity ID for the given prefab in the specified world.
+ */
+declare const getPrefabEid: (world: World, prefab: PrefabNode) => number | undefined;
+/**
+ * Gets the prefab matching this entity ID.
+ *
+ * @param world - The world to get the prefab EID from.
+ * @param prefab - The prefab to get the EID for.
+ * @returns The entity ID for the given prefab in the specified world.
+ */
+declare const getPrefab: (world: World, eid: number) => PrefabNode | undefined;
+
 declare const registerQuery: <W extends World>(world: W, query: Query) => void;
 /**
  * Defines a query function which returns a matching set of entities when called on a world.
@@ -370,17 +356,10 @@ declare const registerQuery: <W extends World>(world: W, query: Query) => void;
  * @param {array} components
  * @returns {function} query
  */
-declare const defineQuery: (components: Component[]) => Query;
-declare function query<W extends World>(world: W, components: Component[]): QueryResult<W>;
-declare function query<W extends World>(world: W, queue: Queue): QueryResult<W>;
+declare const defineQuery: (components: (Component | QueryModifierTuple)[]) => Query;
+declare function query<W extends World>(world: W, components: (Component | QueryModifierTuple)[]): QueryResult;
+declare function query<W extends World>(world: W, queue: Queue): QueryResult;
 declare const commitRemovals: (world: World) => void;
-/**
- * Resets a Changed-based query, clearing the underlying list of changed entities.
- *
- * @param {World} world
- * @param {function} query
- */
-declare const resetChangedQuery: (world: World, query: TODO) => void;
 /**
  * Removes a query from a world.
  *
@@ -403,78 +382,123 @@ declare const enterQuery: (query: Query) => (world: World) => readonly number[];
  */
 declare const exitQuery: (query: Query) => (world: World) => readonly number[];
 
-declare const archetypeHash: (world: World, components: Component[]) => any;
+declare const Not: (c: Component) => QueryModifierTuple;
 
 declare function defineEnterQueue(query: Query): Queue;
 declare function defineEnterQueue(components: Component[]): Queue;
 declare function defineExitQueue(query: Query): Queue;
 declare function defineExitQueue(components: Component[]): Queue;
 
-type Serializer<W extends World = World> = (target: W | number[]) => ArrayBuffer;
-type Deserializer<W extends World = World> = (world: W, packet: ArrayBuffer, mode?: (typeof DESERIALIZE_MODE)[keyof typeof DESERIALIZE_MODE]) => number[];
+declare const archetypeHash: (world: World, components: (Component | QueryModifierTuple)[]) => string;
 
-declare const DESERIALIZE_MODE: {
-    readonly REPLACE: 0;
-    readonly APPEND: 1;
-    readonly MAP: 2;
-};
 /**
- * Defines a new serializer which targets the given components to serialize the data of when called on a world or array of EIDs.
+ * Defines a new relation type with optional configuration options.
  *
- * @param {object|array} target
- * @param {number} [maxBytes=20000000]
- * @returns {function} serializer
+ * @param definition - An optional object that defines the relation options.
+ * @param definition.component - A factory function that creates the relation component.
+ * @param definition.exclusive - Whether the relation is exclusive (i.e., an entity can only have one instance of this relation).
+ * @param definition.autoRemoveSubject - A boolean indicating whether the relation component should be automatically removed when the subject entity is removed.
+ * @param definition.onTargetRemoved - A callback function that is called when a target entity of this relation is removed.
+ * @returns The defined relation type.
  */
-declare const defineSerializer: (target: TODO, maxBytes?: number) => Serializer;
+declare const defineRelation: <T extends Component>(definition?: {
+    component?: () => T;
+    exclusive?: boolean;
+    autoRemoveSubject?: boolean;
+    onTargetRemoved?: (world: World, subject: number, target: number) => void;
+}) => RelationType<T>;
 /**
- * Defines a new deserializer which targets the given components to deserialize onto a given world.
+ * Creates or retrieves a relation component for the given relation and target.
  *
- * @param {object|array} target
- * @returns {function} deserializer
+ * @param relation - The relation type to use.
+ * @param target - The target for the relation.
+ * @returns The relation component for the given relation and target.
+ * @throws {Error} If the relation or target is undefined.
  */
-declare const defineDeserializer: (target: TODO) => Deserializer;
+declare const Pair: <T extends Component>(relation: RelationType<T>, target: RelationTarget) => T;
+declare const Wildcard: RelationType<any> | string;
+declare const IsA: RelationType<any>;
+declare const ChildOf: RelationType<Component>;
+declare const ParentOf: RelationType<Component>;
+/**
+ * Retrieves the relation targets for the given entity in the specified world.
+ *
+ * @param world - The world to search for the entity.
+ * @param relation - The relation type to use.
+ * @param eid - The entity ID to search for.
+ * @returns An array of relation targets for the given entity and relation.
+ */
+declare const getRelationTargets: (world: World, relation: RelationType<any>, eid: number) => any[];
+declare const getParent: (world: World, eid: number) => any;
+declare const getChild: (world: World, eid: number, options?: {
+    components?: (Component | QueryModifierTuple)[];
+    deep?: boolean;
+}) => number | undefined;
+declare const getChildren: (world: World, eid: number, options?: {
+    components?: (Component | QueryModifierTuple)[];
+    deep?: boolean;
+}) => number[];
 
-declare const parentArray: (store: TODO) => any;
+type System<W extends World = World, R extends any[] = any[]> = (world: W, ...args: R) => W;
+
+/**
+ * Defines a new system function.
+ *
+ * @param {function} update
+ * @returns {function}
+ */
+declare const defineSystem: <W extends World = World, R extends any[] = any[]>(update: (world: W, ...args: R) => void) => System<W, R>;
 
 declare const pipe: (...fns: Function[]) => (input: any) => any;
 
-declare const $prefabComponents: unique symbol;
-declare const $worldToPrefab: unique symbol;
+declare const worlds: World[];
+declare const flushRemovedEntities: (world: World) => void;
+declare const getEntityCursor: (world: World) => number;
+declare const getRecycledEntities: (world: World) => number[];
+declare function defineWorld<W extends object = {}>(world?: W): W & World;
+declare function registerWorld(world: World): void;
+/**
+ * Creates a new world.
+ *
+ * @returns {object}
+ */
+declare function createWorld<W extends object = {}>(w?: W): W & World;
+/**
+ * Resets a world.
+ *
+ * @param {World} world
+ * @returns {object}
+ */
+declare const resetWorld: (world: World) => World;
+/**
+ * Deletes a world.
+ *
+ * @param {World} world
+ */
+declare const deleteWorld: (world: World) => void;
+/**
+ * Returns all components registered to a world
+ *
+ * @param {World} world
+ * @returns Array
+ */
+declare const getWorldComponents: (world: World) => Component[];
+/**
+ * Returns all existing entities in a world
+ *
+ * @param {World} world
+ * @returns Array
+ */
+declare const getAllEntities: (world: World) => number[];
 
-type PrefabToken = {
-    [$prefabComponents]: Component[];
-    [$worldToPrefab]: Map<World, number>;
-};
-
-type OnTargetRemovedCallback = (world: World, subject: number, target: number) => void;
-type RelationTarget = number | string | PrefabToken;
-type RelationType<T> = T & {
-    [$pairsMap]: Map<number | string, T>;
-    [$initStore]: () => T;
-    [$exclusiveRelation]: boolean;
-    [$autoRemoveSubject]: boolean;
-    [$onTargetRemoved]: OnTargetRemovedCallback;
-} & ((target: RelationTarget) => T);
-
-declare const defineRelation: <T>(options?: {
-    initStore?: () => T;
-    exclusive?: boolean;
-    autoRemoveSubject?: boolean;
-    onTargetRemoved?: OnTargetRemovedCallback;
-}) => RelationType<T>;
-declare const Pair: <T>(relation: RelationType<T>, target: RelationTarget) => T;
-declare const Wildcard: RelationType<any> | string;
-declare const IsA: RelationType<any>;
-declare const getRelationTargets: (world: World, relation: RelationType<any>, eid: number) => any[];
-
-declare const definePrefab: (components?: Component[]) => PrefabToken;
-declare const registerPrefab: (world: World, prefab: PrefabToken) => number;
-declare const registerPrefabs: (world: World, prefabs: PrefabToken[]) => number[];
-declare const addPrefab: (world: World) => number;
+declare function withParams<P extends PrefabNode>(prefab: P, params: P extends PrefabNode<infer Params> ? Params : never): [P, P extends PrefabNode<infer Params> ? Params : never];
+declare function withParams<C extends Component>(component: C, params: C extends Component<any, infer Params> ? Params : never): [C, C extends Component<any, infer Params> ? Params : never];
 
 declare const SYMBOLS: {
     $prefabComponents: typeof $prefabComponents;
-    $worldToPrefab: typeof $worldToPrefab;
+    $worldToEid: typeof $worldToEid;
+    $children: typeof $children;
+    $ancestors: typeof $ancestors;
     $pairsMap: typeof $pairsMap;
     $isPairComponent: typeof $isPairComponent;
     $relation: typeof $relation;
@@ -483,29 +507,11 @@ declare const SYMBOLS: {
     $exclusiveRelation: typeof $exclusiveRelation;
     $autoRemoveSubject: typeof $autoRemoveSubject;
     $relationTargetEntities: typeof $relationTargetEntities;
-    $initStore: typeof $initStore;
-    $storeRef: typeof $storeRef;
-    $storeSize: typeof $storeSize;
-    $storeMaps: typeof $storeMaps;
-    $storeFlattened: typeof $storeFlattened;
-    $storeBase: typeof $storeBase;
-    $storeType: typeof $storeType;
-    $storeArrayElementCounts: typeof $storeArrayElementCounts;
-    $storeSubarrays: typeof $storeSubarrays;
-    $subarrayCursors: typeof $subarrayCursors;
-    $subarray: typeof $subarray;
-    $subarrayFrom: typeof $subarrayFrom;
-    $subarrayTo: typeof $subarrayTo;
-    $parentArray: typeof $parentArray;
-    $tagStore: typeof $tagStore;
-    $queryShadow: typeof $queryShadow;
-    $serializeShadow: typeof $serializeShadow;
-    $indexType: typeof $indexType;
-    $indexBytes: typeof $indexBytes;
-    $isEidType: typeof $isEidType;
+    $component: typeof $component;
     $modifier: typeof $modifier;
     $queries: typeof $queries;
     $notQueries: typeof $notQueries;
+    $hashToUncachedQuery: typeof $hashToUncachedQuery;
     $queriesHashMap: typeof $queriesHashMap;
     $querySparseSet: typeof $querySparseSet;
     $queueRegisters: typeof $queueRegisters;
@@ -514,22 +520,28 @@ declare const SYMBOLS: {
     $queryComponents: typeof $queryComponents;
     $enterQuery: typeof $enterQuery;
     $exitQuery: typeof $exitQuery;
-    $componentMap: typeof $componentMap;
+    $componentToInstance: typeof $componentToInstance;
     $componentCount: typeof $componentCount;
-    $schema: typeof $schema;
+    $onAdd: typeof $onAdd;
+    $onRemove: typeof $onRemove;
+    $onReset: typeof $onReset;
+    $onSet: typeof $onSet;
+    $onRegister: typeof $onRegister;
+    $createStore: typeof $createStore;
     $entityMasks: typeof $entityMasks;
     $entityComponents: typeof $entityComponents;
     $entitySparseSet: typeof $entitySparseSet;
     $entityArray: typeof $entityArray;
     $entityIndices: typeof $entityIndices;
     $removedEntities: typeof $removedEntities;
-    $size: typeof $size;
     $bitflag: typeof $bitflag;
-    $archetypes: typeof $archetypes;
     $localEntities: typeof $localEntities;
     $localEntityLookup: typeof $localEntityLookup;
-    $manualEntityRecycling: typeof $manualEntityRecycling;
-    $bufferQueries: typeof $bufferQueries;
+    $entityCursor: typeof $entityCursor;
+    $removed: typeof $removed;
+    $removedOut: typeof $removedOut;
+    $recycled: typeof $recycled;
+    $eidToPrefab: typeof $eidToPrefab;
 };
 
-export { type ArrayByType, Changed, type Component, type ComponentNode, type ComponentProp, type ComponentType, type Constructor, DESERIALIZE_MODE, type Deserializer, type HasBufferQueries, IsA, type ListType, type Metadata, Not, type OnTargetRemovedCallback, Pair, type PrefabToken, type Query, type QueryData, type QueryModifier, type QueryResult, type Queue, type RelationTarget, type RelationType, SYMBOLS, type Schema, type Serializer, type System, type TODO, type TypedArray, TYPES_ENUM as Types, Wildcard, type World, addComponent, addComponents, addEntity, addPrefab, archetypeHash, commitRemovals, createWorld, defineComponent, defineDeserializer, defineEnterQueue, defineExitQueue, definePrefab, defineQuery, defineRelation, defineSerializer, defineSystem, defineWorld, deleteWorld, enableBufferedQueries, enableManualEntityRecycling, enterQuery, entityExists, exitQuery, flushRemovedEntities, getAllEntities, getDefaultSize, getEntityComponents, getRelationTargets, getWorldComponents, hasComponent, parentArray, pipe, query, registerComponent, registerComponents, registerPrefab, registerPrefabs, registerQuery, registerWorld, removeComponent, removeComponents, removeEntity, removeQuery, resetChangedQuery, resetGlobals, resetWorld, setDefaultSize, setRemovedRecycleThreshold, worlds };
+export { ChildOf, type Component, type ComponentInstance, type ComponentOrWithParams, type Constructor, type IWorld, IsA, Not, Pair, ParentOf, Prefab, type PrefabNode, type Query, type QueryData, type QueryModifier, type QueryModifierTuple, type QueryResult, type Queue, type RelationOptions, type RelationTarget, type RelationType, SYMBOLS, type System, type TODO, type TypedArray, TYPES_ENUM as Types, type UncachedQuery, type UncachedQueryData, Wildcard, type World, addComponent, addComponents, addEntity, archetypeHash, commitRemovals, createWorld, defineComponent, defineEnterQueue, defineExitQueue, definePrefab, defineQuery, defineRelation, defineSystem, defineWorld, deleteWorld, enterQuery, entityExists, exitQuery, flushRemovedEntities, getAllEntities, getChild, getChildren, getEntityComponents, getEntityCursor, getParent, getPrefab, getPrefabEid, getRecycledEntities, getRelationTargets, getStore, getWorldComponents, hasComponent, pipe, query, registerComponent, registerComponents, registerPrefab, registerQuery, registerWorld, removeComponent, removeComponents, removeEntity, removeQuery, resetWorld, setStore, withParams, worlds };
