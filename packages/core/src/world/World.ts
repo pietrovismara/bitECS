@@ -5,11 +5,11 @@ import {
 	$dirtyQueries,
 	$notQueries,
 	$queriesHashMap,
+	$hashToUncachedQuery,
 } from '../query/symbols.js';
 import { removeEntity } from '../entity/Entity.js';
 import { World } from './types.js';
 import {
-	$archetypes,
 	$bitflag,
 	$eidToPrefab,
 	$entityCursor,
@@ -63,7 +63,6 @@ export function defineWorld<W extends object = {}>(world?: W): W & World {
 	defineHiddenProperties(world, {
 		[$entityMasks]: [new Array()],
 		[$entityComponents]: new Map(),
-		[$archetypes]: [],
 		[$entitySparseSet]: entitySparseSet,
 		[$entityArray]: entitySparseSet.dense,
 		[$bitflag]: 1,
@@ -71,6 +70,7 @@ export function defineWorld<W extends object = {}>(world?: W): W & World {
 		[$componentCount]: 0,
 		[$queryDataMap]: new Map(),
 		[$queries]: new Set(),
+		[$hashToUncachedQuery]: new Map(),
 		[$queriesHashMap]: new Map(),
 		[$notQueries]: new Set(),
 		[$dirtyQueries]: new Set(),
@@ -116,7 +116,6 @@ export const resetWorld = (world: World) => {
 
 	world[$entityMasks] = [new Array()];
 	world[$entityComponents] = new Map();
-	world[$archetypes] = [];
 
 	world[$entitySparseSet] = SparseSet();
 	world[$entityArray] = world[$entitySparseSet].dense;
@@ -150,7 +149,6 @@ export const deleteWorld = (world: World) => {
 	const deletedWorld = world as unknown as Record<symbol, any>;
 	delete deletedWorld[$entityMasks];
 	delete deletedWorld[$entityComponents];
-	delete deletedWorld[$archetypes];
 	delete deletedWorld[$entitySparseSet];
 	delete deletedWorld[$entityArray];
 	delete deletedWorld[$bitflag];
@@ -169,6 +167,7 @@ export const deleteWorld = (world: World) => {
 	delete deletedWorld[$removedOut];
 	delete deletedWorld[$recycled];
 	delete deletedWorld[$eidToPrefab];
+	delete deletedWorld[$hashToUncachedQuery];
 
 	// Remove the world from the worlds array
 	const index = worlds.indexOf(world);

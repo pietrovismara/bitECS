@@ -1,4 +1,6 @@
-import { Component, World, getEntityComponents } from '..';
+import { Component, QueryModifierTuple, World, getEntityComponents, query } from '..';
+import { getUncachedQueryData } from '../query/UncachedQuery';
+import { queryCheckEntity } from '../query/Query';
 import { defineHiddenProperty } from '../utils/defineHiddenProperty';
 import {
 	$autoRemoveSubject,
@@ -93,7 +95,8 @@ export const Pair = <T extends Component>(relation: RelationType<T>, target: Rel
 
 export const Wildcard: RelationType<any> | string = defineRelation();
 export const IsA: RelationType<any> = defineRelation();
-export const ChildOf = defineRelation({ autoRemoveSubject: true });
+export const ChildOf = defineRelation({ exclusive: true, autoRemoveSubject: true });
+export const ParentOf = defineRelation({});
 
 /**
  * Retrieves the relation targets for the given entity in the specified world.
@@ -112,4 +115,75 @@ export const getRelationTargets = (world: World, relation: RelationType<any>, ei
 		}
 	}
 	return targets;
+};
+
+export const getParent = (world: World, eid: number) => {
+	return getRelationTargets(world, ChildOf, eid)[0];
+};
+
+export const getChild = (
+	world: World,
+	eid: number,
+	options?: {
+		components?: (Component | QueryModifierTuple)[];
+		deep?: boolean;
+	}
+) => {
+	const components = options?.components || [];
+	const queryData = getUncachedQueryData(world, components);
+
+	const traverse = (eid: number) => {
+		const children = query(world, [ChildOf(eid)]);
+		if (!children.length) {
+			return;
+		}
+
+		for (let i = 0; i < children.length; i += 1) {
+			const child = children[i];
+			if (queryCheckEntity(world, queryData, child)) {
+				return child;
+			}
+
+			if (options?.deep) {
+				traverse(child);
+			}
+		}
+	};
+
+	return traverse(eid);
+};
+
+export const getChildren = (
+	world: World,
+	eid: number,
+	options?: {
+		components?: (Component | QueryModifierTuple)[];
+		deep?: boolean;
+	}
+) => {
+	const components = options?.components || [];
+	const queryData = getUncachedQueryData(world, components);
+	const out = new Set<number>();
+
+	const traverse = (eid: number) => {
+		const children = query(world, [ChildOf(eid)]);
+		if (!children.length) {
+			return;
+		}
+
+		for (let i = 0; i < children.length; i += 1) {
+			const child = children[i];
+			if (queryCheckEntity(world, queryData, child)) {
+				out.add(child);
+			}
+
+			if (options?.deep) {
+				traverse(child);
+			}
+		}
+	};
+
+	traverse(eid);
+
+	return Array.from(out);
 };

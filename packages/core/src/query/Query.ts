@@ -1,12 +1,9 @@
 import { SparseSet } from '../utils/SparseSet.js';
-import { hasComponent, registerComponent } from '../component/Component.js';
-import { $componentToInstance } from '../component/symbols.js';
+import { hasComponent } from '../component/Component.js';
 import { $entityMasks, $entityArray, $entitySparseSet } from '../entity/symbols.js';
-import { Component } from '../component/types.js';
-import { TODO } from '../utils/types.js';
+import { Component, ComponentInstance } from '../component/types.js';
 import {
 	$dirtyQueries,
-	$modifier,
 	$notQueries,
 	$queries,
 	$queriesHashMap,
@@ -14,103 +11,36 @@ import {
 	$queryDataMap,
 	$queueRegisters,
 } from './symbols.js';
-import { Query, QueryModifier, QueryData, Queue, QueryResult } from './types.js';
+import {
+	Query,
+	QueryData,
+	Queue,
+	QueryResult,
+	QueryModifierTuple,
+	UncachedQueryData,
+} from './types.js';
 import { World } from '../world/types.js';
 import { EMPTY } from '../constants/Constants.js';
 import { getEntityCursor, worlds } from '../world/World.js';
 import { archetypeHash } from './utils.js';
 import { Prefab } from '../prefab/Prefab.js';
+import { createUncachedQueryData } from './UncachedQuery.js';
 
 export const queries: Query[] = [];
-
-function modifier(c: Component, mod: string): QueryModifier {
-	const inner: TODO = () => [c, mod] as const;
-	inner[$modifier] = true;
-	return inner;
-}
-
-export const Not = (c: Component) => modifier(c, 'not');
-export const Or = (c: Component) => modifier(c, 'or');
-
-export function Any(...comps: Component[]) {
-	return function QueryAny() {
-		return comps;
-	};
-}
-export function All(...comps: Component[]) {
-	return function QueryAll() {
-		return comps;
-	};
-}
-export function None(...comps: Component[]) {
-	return function QueryNone() {
-		return comps;
-	};
-}
 
 export const registerQuery = <W extends World>(world: W, query: Query) => {
 	// Early exit if query is already registered.
 	if (world[$queryDataMap].has(query)) return;
 
-	const components: TODO = [];
-	const notComponents: TODO = [];
-
-	let queriesPrefab = false;
-	query[$queryComponents].forEach((c: TODO) => {
-		if (typeof c === 'function' && c[$modifier]) {
-			const [comp, mod] = c();
-			if (!world[$componentToInstance].has(comp)) registerComponent(world, comp);
-			if (mod === 'not') {
-				notComponents.push(comp);
-			}
-		} else {
-			if (!world[$componentToInstance].has(c)) registerComponent(world, c);
-			components.push(c);
-		}
-
-		if (c === Prefab) queriesPrefab = true;
-	});
-
-	const mapComponents = (c: Component) => world[$componentToInstance].get(c)!;
-	const allComponents = components.concat(notComponents).map(mapComponents);
-
 	const sparseSet = SparseSet();
-
-	const archetypes: TODO = [];
 	const toRemove = SparseSet();
 
 	// A default queue is created and index 0 to be used for enterQuery and exitQuery.
 	const enterQueues = [SparseSet()];
 	const exitQueues = [SparseSet()];
 
-	const generations = allComponents
-		.map((c: TODO) => c.generationId)
-		.reduce((a: TODO, v: TODO) => {
-			if (a.includes(v)) return a;
-			a.push(v);
-			return a;
-		}, []);
-
-	const reduceBitflags = (a: TODO, c: TODO) => {
-		if (!a[c.generationId]) a[c.generationId] = 0;
-		a[c.generationId] |= c.bitflag;
-		return a;
-	};
-
-	const masks = components.map(mapComponents).reduce(reduceBitflags, {});
-	const notMasks = notComponents.map(mapComponents).reduce(reduceBitflags, {});
-	const hasMasks = allComponents.reduce(reduceBitflags, {});
-
 	const q = Object.assign(sparseSet, {
-		archetypes,
-		components,
-		notComponents,
-		allComponents,
-		masks,
-		notMasks,
-		// orMasks,
-		hasMasks,
-		generations,
+		...createUncachedQueryData(world, query[$queryComponents]),
 		toRemove,
 		enterQueues,
 		exitQueues,
@@ -123,18 +53,18 @@ export const registerQuery = <W extends World>(world: W, query: Query) => {
 	const hash = archetypeHash(world, query[$queryComponents]);
 	world[$queriesHashMap].set(hash, q);
 
-	allComponents.forEach((c: TODO) => {
+	q.instances.forEach((c) => {
 		c.queries.add(q);
 	});
 
-	if (notComponents.length) world[$notQueries].add(q);
+	if (Object.values(q.notMasks).length > 0) world[$notQueries].add(q);
 
 	// Register and create queues.
 	query[$queueRegisters].forEach((register) => register(world));
 
 	for (let eid = 0; eid < getEntityCursor(world); eid++) {
 		if (!world[$entitySparseSet].has(eid)) continue;
-		if (!queriesPrefab && hasComponent(world, eid, Prefab)) continue;
+		if (!q.queriesPrefab && hasComponent(world, eid, Prefab)) continue;
 		const match = queryCheckEntity(world, q, eid);
 		if (match) queryAddEntity(q, eid);
 	}
@@ -147,7 +77,7 @@ export const registerQuery = <W extends World>(world: W, query: Query) => {
  * @returns {function} query
  */
 
-export const defineQuery = (components: (Component | QueryModifier)[]): Query => {
+export const defineQuery = (components: (Component | QueryModifierTuple)[]): Query => {
 	if (components === undefined) {
 		const query: Query = function <W extends World>(world: W) {
 			return world[$entityArray].slice();
@@ -181,10 +111,10 @@ export const defineQuery = (components: (Component | QueryModifier)[]): Query =>
 
 export function query<W extends World>(
 	world: W,
-	components: (Component | QueryModifier)[]
+	components: (Component | QueryModifierTuple)[]
 ): QueryResult;
 export function query<W extends World>(world: W, queue: Queue): QueryResult;
-export function query<W extends World>(world: W, args: (Component | QueryModifier)[] | Queue) {
+export function query<W extends World>(world: W, args: (Component | QueryModifierTuple)[] | Queue) {
 	if (Array.isArray(args)) {
 		const components = args;
 		const hash = archetypeHash(world, components);
@@ -200,13 +130,11 @@ export function query<W extends World>(world: W, args: (Component | QueryModifie
 	}
 }
 
-export const queryCheckEntity = <W extends World>(world: W, q: QueryData, eid: number) => {
-	const { masks, notMasks, generations } = q;
-
-	for (let i = 0; i < generations.length; i++) {
-		const generationId = generations[i];
-		const qMask = masks[generationId];
-		const qNotMask = notMasks[generationId];
+export const queryCheckEntity = <W extends World>(world: W, q: UncachedQueryData, eid: number) => {
+	for (let i = 0; i < q.generations.length; i++) {
+		const generationId = q.generations[i];
+		const qMask = q.masks[generationId];
+		const qNotMask = q.notMasks[generationId];
 		const eMask = world[$entityMasks][generationId][eid];
 
 		if (qNotMask && (eMask & qNotMask) !== 0) {
@@ -221,11 +149,9 @@ export const queryCheckEntity = <W extends World>(world: W, q: QueryData, eid: n
 	return true;
 };
 
-export const queryCheckComponent = (q: QueryData, c: TODO) => {
-	const { generationId, bitflag } = c;
-	const { hasMasks } = q;
-	const mask = hasMasks[generationId];
-	return (mask & bitflag) === bitflag;
+export const queryCheckComponent = (q: UncachedQueryData, c: ComponentInstance) => {
+	const mask = q.hasMasks[c.generationId];
+	return (mask & c.bitflag) === c.bitflag;
 };
 
 export const queryAddEntity = (q: QueryData, eid: number) => {

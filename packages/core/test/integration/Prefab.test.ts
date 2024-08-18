@@ -3,12 +3,14 @@ import { describe, expect, test, vi } from 'vitest';
 import {
 	ChildOf,
 	IsA,
+	ParentOf,
 	World,
 	addEntity,
 	createWorld,
 	defineComponent,
 	definePrefab,
 	getAllEntities,
+	getParent,
 	getPrefabEid,
 	getStore,
 	hasComponent,
@@ -209,6 +211,76 @@ describe('Prefab Integration Tests', () => {
 
 		const trunk = trunks[0];
 		const canopy = canopies[0];
+
+		const boxes = getStore(world, Box);
+		const positions = getStore(world, Position);
+
+		assert(boxes[trunk][0] === 0.4);
+		assert(boxes[canopy][0] === 0.8);
+		assert(positions[trunk][1] === 0.25);
+		expect(onAddFn).toHaveBeenCalledTimes(1);
+	});
+
+	test('nested prefabs with ParentOf', () => {
+		type Vec3 = [number, number, number];
+		const vec3Store = {
+			store: () => [] as Vec3[],
+			onSet: (world: World, store: Vec3[], eid: number, vec: Vec3) => {
+				store[eid] = vec ?? [0, 0, 0];
+			},
+		};
+
+		const Box = defineComponent(vec3Store);
+		const Position = defineComponent(vec3Store);
+		const Color = defineComponent(vec3Store);
+
+		const Canopy = definePrefab({
+			components: [
+				withParams(Position, [0, 0.9, 0]),
+				withParams(Box, [0.8, 0.8, 0.8]),
+				withParams(Color, [0.25, 0.2, 0.1]),
+			],
+			onAdd: (world, eid) => {
+				const boxes = getStore(world, Box);
+				const positions = getStore(world, Position);
+
+				const h = Math.random() + 0.8;
+				boxes[eid][1] = h;
+				positions[eid][1] = h / 2 + 0.5;
+
+				onAddFn();
+			},
+		});
+
+		const Trunk = definePrefab({
+			components: [
+				withParams(Position, [0, 0.25, 0]),
+				withParams(Box, [0.4, 0.5, 0.4]),
+				withParams(Color, [0.25, 0.2, 0.1]),
+			],
+		});
+
+		const Tree = definePrefab({
+			components: [Position, ParentOf(Canopy), ParentOf(Trunk)],
+		});
+
+		const onAddFn = vi.fn();
+
+		const world = createWorld();
+
+		const tree = addEntity(world, IsA(Tree));
+		const trunks = query(world, [ChildOf(tree), IsA(Trunk)]);
+		const canopies = query(world, [ChildOf(tree), IsA(Canopy)]);
+		assert(trunks.length === 1);
+		assert(canopies.length === 1);
+
+		const trunk = trunks[0];
+		const canopy = canopies[0];
+
+		const trunkParent = getParent(world, trunk);
+		const canopyParent = getParent(world, canopy);
+		assert(trunkParent === tree);
+		assert(canopyParent === tree);
 
 		const boxes = getStore(world, Box);
 		const positions = getStore(world, Position);

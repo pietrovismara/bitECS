@@ -14,7 +14,6 @@ export { TYPES_ENUM as Types } from './constants/Constants.js';
 export { addEntity, entityExists, getEntityComponents, removeEntity } from './entity/Entity.js';
 export * from './prefab/Prefab.js';
 export {
-	Not,
 	commitRemovals,
 	defineQuery,
 	enterQuery,
@@ -23,6 +22,7 @@ export {
 	registerQuery,
 	removeQuery,
 } from './query/Query.js';
+export { Not } from './query/modifiers.js';
 export { defineEnterQueue, defineExitQueue } from './query/Queue.js';
 export { archetypeHash } from './query/utils.js';
 export * from './relation/Relation.js';

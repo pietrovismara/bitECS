@@ -1,7 +1,7 @@
 import { $onAdd, $onRemove, $onSet } from '../component/symbols';
 import { Component, ComponentOrWithParams } from '../component/types';
 import { addEntity } from '../entity/Entity';
-import { ChildOf, IsA } from '../relation/Relation';
+import { ChildOf, IsA, ParentOf } from '../relation/Relation';
 import { $isPairComponent, $pairTarget, $relation } from '../relation/symbols';
 import { defineHiddenProperties, defineHiddenProperty } from '../utils/defineHiddenProperty';
 import { $eidToPrefab } from '../world/symbols';
@@ -30,6 +30,7 @@ export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
 
 	const prefabs: PrefabNode<any>[] = [];
 	const components: ComponentOrWithParams[] = [];
+	const children: PrefabNode<any>[] = [];
 
 	if (definition?.components) {
 		for (const c of definition?.components) {
@@ -54,6 +55,9 @@ export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
 					if (typeof target === 'object' && $worldToEid in target) {
 						target[$children].push(prefab);
 					}
+				} else if (relation === ParentOf) {
+					const target = component[$pairTarget] as PrefabNode<any>;
+					children.push(target);
 				}
 			} else {
 				components.push(c);
@@ -76,7 +80,7 @@ export const definePrefab = <Params = void, Ref extends {} = {}>(definition?: {
 		[$prefabComponents]: components,
 		[$worldToEid]: new Map(),
 		[$ancestors]: ancestors,
-		[$children]: [],
+		[$children]: children,
 	});
 
 	return prefab;

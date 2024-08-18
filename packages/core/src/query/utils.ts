@@ -4,16 +4,16 @@ import { Component } from '../component/types';
 import { TODO } from '../utils/types';
 import { World } from '../world/types';
 import { $modifier } from './symbols';
-import { QueryModifier } from './types';
+import { QueryModifierTuple } from './types';
 
-export const archetypeHash = (world: World, components: (Component | QueryModifier)[]) => {
+export const archetypeHash = (world: World, components: (Component | QueryModifierTuple)[]) => {
 	return components
-		.sort((a: TODO, b: TODO) => {
-			if (typeof a === 'function' && a[$modifier]) {
-				a = a()[0];
+		.sort((a, b) => {
+			if ($modifier in a) {
+				a = a[0];
 			}
-			if (typeof b === 'function' && b[$modifier]) {
-				b = b()[0];
+			if ($modifier in b) {
+				b = b[0];
 			}
 			if (!world[$componentToInstance].has(a)) registerComponent(world, a);
 			if (!world[$componentToInstance].has(b)) registerComponent(world, b);
@@ -21,12 +21,16 @@ export const archetypeHash = (world: World, components: (Component | QueryModifi
 			const bData = world[$componentToInstance].get(b)!;
 			return aData.id > bData.id ? 1 : -1;
 		})
-		.reduce((acc, component: TODO) => {
-			let mod;
-			if (typeof component === 'function' && component[$modifier]) {
-				mod = component()[1];
-				component = component()[0];
+		.reduce((acc, c) => {
+			let mod: string | null = null;
+			let component: Component;
+			if ($modifier in c) {
+				mod = c[1];
+				component = c[0];
+			} else {
+				component = c;
 			}
+
 			if (!world[$componentToInstance].has(component)) registerComponent(world, component);
 			const componentData = world[$componentToInstance].get(component)!;
 			if (mod) {

@@ -3,13 +3,16 @@ import { describe, expect, test, vi } from 'vitest';
 import {
 	addComponent,
 	addEntity,
+	ChildOf,
 	createWorld,
 	defineComponent,
 	defineRelation,
 	entityExists,
+	getChildren,
 	getRelationTargets,
 	getStore,
 	hasComponent,
+	Not,
 	Pair,
 	removeEntity,
 } from '../../src';
@@ -137,5 +140,24 @@ describe('Relation Unit Tests', () => {
 		removeEntity(world, hero);
 
 		expect(cbMock).toBeCalledTimes(1);
+	});
+
+	test('should return the children of an entity', () => {
+		const world = createWorld();
+
+		const A = defineComponent();
+		const B = defineComponent();
+
+		const scene = addEntity(world);
+
+		const group = addEntity(world, ChildOf(scene), A);
+
+		const child1 = addEntity(world, ChildOf(group), A, B);
+		const child2 = addEntity(world, ChildOf(group), B);
+
+		const children = getChildren(world, scene, { components: [B, Not(A)], deep: true });
+
+		expect(children.length).toBe(1);
+		expect(children[0]).toBe(child2);
 	});
 });

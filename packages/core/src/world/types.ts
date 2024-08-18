@@ -4,17 +4,17 @@ import { $entityArray, $entityComponents, $entityMasks, $entitySparseSet } from 
 import { PrefabNode } from '../prefab/types';
 import {
 	$dirtyQueries,
+	$hashToUncachedQuery,
 	$notQueries,
 	$queries,
 	$queriesHashMap,
 	$queryDataMap,
 } from '../query/symbols';
-import { Query, QueryData } from '../query/types';
+import { Query, QueryData, UncachedQueryData } from '../query/types';
 import { $relationTargetEntities } from '../relation/symbols';
 import { RelationTarget } from '../relation/types';
 import { SparseSet } from '../utils/SparseSet';
 import {
-	$archetypes,
 	$bitflag,
 	$eidToPrefab,
 	$entityCursor,
@@ -29,11 +29,11 @@ export interface World {
 	[$entityArray]: number[];
 	[$entityMasks]: Array<number>[];
 	[$entityComponents]: Map<number, Set<Component>>;
-	[$archetypes]: any[];
 	[$entitySparseSet]: ReturnType<typeof SparseSet>;
 	[$bitflag]: number;
 	[$componentToInstance]: Map<Component, ComponentInstance>;
 	[$componentCount]: number;
+	[$hashToUncachedQuery]: Map<string, UncachedQueryData>;
 	[$queryDataMap]: Map<Query, QueryData>;
 	[$queries]: Set<QueryData>;
 	[$queriesHashMap]: Map<string, QueryData>;

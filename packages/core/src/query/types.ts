@@ -1,32 +1,37 @@
-import { Component } from '../component/types';
+import { Component, ComponentInstance } from '../component/types';
 import { SparseSet } from '../utils/SparseSet';
 import { World } from '../world/types';
-import { $queryComponents, $queueRegisters } from './symbols';
+import { $modifier, $queryComponents, $queueRegisters } from './symbols';
 
-export type QueryModifier<W extends World = World> = (
-	c: Component[]
-) => (world: W) => Component | QueryModifier<W>;
+export type QueryModifierTuple = readonly [Component, string] & { [$modifier]: boolean };
+
+export type QueryModifier = (c: Component[]) => () => QueryModifierTuple;
 
 export type QueryResult = readonly number[];
 
 export type Query = (<W extends World = World>(world: W) => QueryResult) & {
-	[$queryComponents]: (Component | QueryModifier)[];
+	[$queryComponents]: (Component | QueryModifierTuple)[];
 	[$queueRegisters]: ((world: World) => void)[];
 };
 
+export type UncachedQueryData = {
+	generations: number[];
+	masks: Record<number, number>;
+	notMasks: Record<number, number>;
+	hasMasks: Record<number, number>;
+	instances: ComponentInstance[];
+	queriesPrefab: boolean;
+};
+
 export type QueryData = ReturnType<typeof SparseSet> & {
-	archetypes: any;
-	notComponents: any;
-	allComponents: Component[];
-	masks: any;
-	notMasks: any;
-	hasMasks: any;
-	generations: any;
 	toRemove: ReturnType<typeof SparseSet>;
 	enterQueues: ReturnType<typeof SparseSet>[];
 	exitQueues: ReturnType<typeof SparseSet>[];
-	shadows: any;
 	query: Query;
+} & UncachedQueryData;
+
+export type UncachedQuery = (<W extends World = World>(world: W) => QueryResult) & {
+	[$queryComponents]: (Component | QueryModifier)[];
 };
 
 export type Queue<W extends World = World> = (world: W, drain?: boolean) => readonly number[];
